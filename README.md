@@ -1,4 +1,4 @@
-# K_Means_Clustering
+# k-means-clustering
 ## 程式簡介
 ### 使用說明
 > 透過視覺化界面與動態更新，展示「K-Means」的聚類過程
