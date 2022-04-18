@@ -3,57 +3,87 @@ Created on Tue Nov 24 22:02:29 2020
 
 @author: Mu-Ping
 """
-
+import math
 import matplotlib.pyplot as plt
-import tkinter as tk
 import numpy as np
+import tkinter as tk
+
+from tkinter import ttk 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib import animation
 
-class k_mean():
+class PointNode():
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.plot = None
+        
+    def setPlot(self, plot):
+        self.plot = plot
+        
+    def beSelected(self):
+        self.plot.set_color("#ff7f0e")
+        
+    def beProcessed(self):
+        self.plot.set_color("#d62728")
+        
+class K_mean():
+    
     def __init__(self):
         self.data = []
-        self.center = []        #群心
-        self.center_data = None #群心資料
-        self.plot = []          #群心圖
+        self.center = []       
+        self.center_data = None 
+        self.plot = []          
+        self.ani =None
+        
         
     def gen_data(self):
-        plt.clf()
-        plt.title("Data")
         
+        # set plot
+        plt.clf()
+        plt.title("Data Distribution", fontsize=28)
+        plt.xlabel('x asix', fontsize=20)
+        plt.ylabel('y asix', fontsize=20)
+        plt.xlim(-1200, 1200)
+        plt.ylim(-1200, 1200)
+        
+        # generate points--------------------------------------------
         data=[]
-        for _ in range(cluster.get()): #群數
-            center_x = np.random.randint(-350, 350)
-            center_y = np.random.randint(-350, 350)
+        for _ in range(clusters_num.get()): #群數
+            center_x = np.random.randint(-1000, 1000)
+            center_y = np.random.randint(-1000, 1000)
             for _ in range(np.random.randint(20, 50)): #一群的點數
-                new_x = center_x + np.random.uniform(-35, 35)
-                new_y = center_y + np.random.uniform(-35, 35)
-                data.append([new_x, new_y])
+                new_x = center_x + np.random.uniform(-120, 120)
+                new_y = center_y + np.random.uniform(-120, 120)
+                
+                data.append(PointNode(new_x, new_y))
                 plt.plot(new_x, new_y, 'o', ms=5 , color = 'gray', alpha=1) #畫圖 ms：折點大小
         self.data = np.array(data)
         canvas.draw()
         
-        
     def start(self):   
-        self.center_data = [[] for _ in range(cluster.get())]
-        ani = animation.FuncAnimation(fig=fig, func=self.update, frames=self.frames, init_func = self.init, interval=1200, blit=False, repeat=False) #動畫
+        self.center_data = [[] for _ in range(clusters_num.get())]
+        self.ani = animation.FuncAnimation(fig=fig, func=self.update, frames=self.frames, init_func = self.init, interval=1200, blit=False, repeat=False) #動畫
         canvas.draw()
         
-    
     def init(self): 
-        for i in range(cluster.get()): #群心
-            center_x = np.random.randint(-290, 290)
-            center_y = np.random.randint(-290, 290)
+
+        for i in range(clusters_num.get()): #群心
+            center_x = np.random.randint(-1000, 1000)
+            center_y = np.random.randint(-1000, 1000)
             self.center.append((center_x, center_y))
-            self.plot.append(plt.plot(center_x, center_y, 'o', ms=7 , color = color[i], alpha=1)) 
-            
-    def update(self, i): #2維資料更新參數
+            self.plot.append(plt.plot(center_x, center_y, 'o', ms=7 , color = color[i], alpha=1)[0]) 
+        
+        canvas.draw()
+        
+    def update(self, i):
         if(i==0):
             for i in self.plot:
                 i[0].remove()
             self.plot=[]
             
-            for i in range(cluster.get()): #更新群心
+            for i in range(clusters_num.get()): #更新群心
                 data_count = 0
                 sum_x = 0
                 sum_y = 0
@@ -73,8 +103,8 @@ class k_mean():
             plt.title("Data")
             
             self.plot=[]
-            self.center_data = [[] for _ in range(cluster.get())]
-            for i in range(cluster.get()):
+            self.center_data = [[] for _ in range(clusters_num.get())]
+            for i in range(clusters_num.get()):
                 self.plot.append(plt.plot(self.center[i][0], self.center[i][1], 'o', ms=5 , color = color[i], alpha=1))
             
             for i in self.data:                 #更新資料
@@ -82,7 +112,7 @@ class k_mean():
                 min_y = 0
                 min_distance = float("inf")
                 min_index = 0
-                for center_index in range(cluster.get()):
+                for center_index in range(clusters_num.get()):
                     distance = ((self.center[center_index][0]-i[0])**2 + (self.center[center_index][1]-i[1])**2)**0.5 # 採取歐基里德距離，其他評估標準亦可
                     if(distance < min_distance):
                         min_x = i[0]
@@ -93,37 +123,75 @@ class k_mean():
                 self.center_data[min_index].append([min_x, min_y]) 
                 plt.plot(i[0], i[1], 'o', ms=5 , color = color[min_index], alpha=.2) 
             
-            
-    def frames(self): # 禎數生成器
+    def frames(self):
         for i in range(60):
             yield i%2
 
+    def stop(self):
+        # stop animation
+        self.ani.event_source.stop()
+        
+        self.clearStructure()
+        
+        # set plot
+        plt.clf()
+        plt.title("Data Distribution", fontsize=28)
+        plt.xlabel('x asix', fontsize=20)
+        plt.ylabel('y asix', fontsize=20)
+        plt.xlim(-1200, 1200)
+        plt.ylim(-1200, 1200)
+        
+        # make points--------------------------------------------
+        for point in self.points:
+            point.setPlot(plt.plot(point.x, point.y, 'o', ms=5 , color = '#1f77b4', alpha=1)[0]) # ms: point size
+            
+        canvas.draw()
+        
+# disable Buttom & Entry
+def disable(component):
+    component['state'] = 'disable'
+
+def enable(component):
+    component['state'] = 'normal'
+    
 window = tk.Tk()
-window.geometry("480x390")
+window.geometry("750x650")
 window.resizable(False, False)
-window.title("k-means 演算法")
+window.title("K-means-clustering Algorithm ")
+window.configure(bg='#E6E6FA')
 
-#全域變數
-cluster = tk.IntVar()#群
-cluster.set(3)
+# Global var
+clusters_num = tk.IntVar()
+clusters_num.set(5)
 color = ["#FF0000", "#0000E3", "#FFD306", "#F75000", "#02DF82", "#6F00D2", "#73BF00"]
-brain = k_mean()
 
-setting1 = tk.Frame(window)
-setting1.grid(row=0, column=0, padx=10, pady=10)
-tk.Label(setting1, font=("微軟正黑體", 12, "bold"), text="群數(k值)").grid(row=0, sticky=tk.W, pady=5)
-tk.Entry(setting1, width=10, textvariable=cluster).grid(row=1, sticky=tk.W)
-
-btn = tk.Button(setting1, text='隨機產生資料', command = brain.gen_data)
-btn.grid(row=8, sticky=tk.W, pady=20)
-btn = tk.Button(setting1, text='開始分類', command = brain.start)
-btn.grid(row=9, sticky=tk.W)
-
+# tk Frame
+setting1 = tk.Frame(window, bg="#F0FFF0")
+setting1.pack(side='top', pady=10)
+separator = ttk.Separator(window, orient='horizontal')
+separator.pack(side='top', fill=tk.X)
 setting2 = tk.Frame(window)
-setting2.grid(row=0, column=1, pady=10)
-fig = plt.figure(figsize=(5,5))
-plt.title("Data")
+setting2.pack(side='top', pady=10)
+
+# Plot
+fig = plt.figure(figsize=(9, 8))
 canvas = FigureCanvasTkAgg(fig, setting2)  # A tk.DrawingArea.
 canvas.get_tk_widget().grid()
+
+# Algorithm
+brain = K_mean()
+brain.gen_data()
+
+# GUI
+tk.Label(setting1, font=("Calibri", 15, "bold"), text="Clusters:", bg="#F0FFF0").pack(side='left', padx=5)
+ent = tk.Entry(setting1, width=5, textvariable=clusters_num)
+ent.pack(side='left')
+btn1 = tk.Button(setting1, font=("Calibri", 12, "bold"), text='Generate points', command=lambda:[brain.gen_data()])
+btn1.pack(side='left', padx=(10, 5), pady=5)
+btn2 = tk.Button(setting1, font=("Calibri", 12, "bold"), text='Start clustering', command=lambda:[brain.start(), disable(btn1), disable(btn2), disable(ent),  enable(btn3)])
+btn2.pack(side='left', padx=(5, 10), pady=5)
+btn3 = tk.Button(setting1, font=("Calibri", 12, "bold"), text='Reset', command=lambda:[brain.stop(), enable(btn1), enable(btn2), enable(ent), disable(btn3)])
+btn3.pack(side='left', padx=(5, 10), pady=5)
+btn3['state'] = 'disable'
 
 window.mainloop()
