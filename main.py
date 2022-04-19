@@ -50,8 +50,14 @@ class K_mean():
     
     def __init__(self):
         self.clusterNodes = []    # record ClusterNode
-        self.centerNodes = []   # record CenterNode             
+        self.centerNodes = []     # record CenterNode             
         self.ani = None
+    
+    def clearClusterNodes(self):
+        self.clusterNodes.clear()
+        
+    def clearCenterNodes(self):
+        self.centerNodes.clear()     
         
     def clearPlot(self):
         plt.clf()
@@ -64,19 +70,20 @@ class K_mean():
     def gen_data(self):
         
         # clear plot
+        self.clearClusterNodes()
         self.clearPlot()
         
         # generate points--------------------------------------------
         for _ in range(clusters_num.get()): #群數
             center_x = np.random.randint(-1000, 1000)
             center_y = np.random.randint(-1000, 1000)
-            for _ in range(np.random.randint(20, 50)): #一群的點數
+            for _ in range(np.random.randint(30, 50)): #一群的點數
                 new_x = center_x + np.random.uniform(-120, 120)
                 new_y = center_y + np.random.uniform(-120, 120)
                 
                 point = ClusterNode(new_x, new_y)
-                point.setPlot(plt.plot(point.x, point.y, 'o', ms=3 , color = 'gray', alpha=1)[0]) # ms: point size   
-                self.clusterNodes.append(point)   
+                point.setPlot(plt.plot(point.x, point.y, 'o', ms=4 , color = 'gray', alpha=0.2)[0]) # ms: point size   
+                self.clusterNodes.append(point) 
                 
         canvas.draw()
         
@@ -115,28 +122,22 @@ class K_mean():
                     centerNode.setPlot(plt.plot(centerNode.x, centerNode.y, 'o', ms=5 , color = centerNode.color, alpha=1)[0]) 
                 
         elif(i==1):
-            self.clearPlot()
 
             for centerNode in self.centerNodes:
-                centerNode.setPlot(plt.plot(centerNode.x, centerNode.y, 'o', ms=5 , color = centerNode.color, alpha=1)[0])
                 centerNode.resetCluster()
                 
             for clusterNode in self.clusterNodes:
-                min_x = 0
-                min_y = 0
                 min_distance = float("inf")
-                min_index = 0
+                min_center = None
                 
-                for center_index in range(clusters_num.get()):
-                    distance = ((self.center[center_index][0]-i[0])**2 + (self.center[center_index][1]-i[1])**2)**0.5 # 採取歐基里德距離，其他評估標準亦可
+                for centerNode in self.centerNodes:
+                    distance = ((centerNode.x - clusterNode.x)**2 + (centerNode.y - clusterNode.y)**2)**0.5 # 採取歐基里德距離，其他評估標準亦可
                     if(distance < min_distance):
-                        min_x = i[0]
-                        min_y = i[1]
                         min_distance = distance
-                        min_index = center_index
-                    
-            self.center_data[min_index].append([min_x, min_y]) 
-            plt.plot(i[0], i[1], 'o', ms=5 , color = color[min_index], alpha=.2) 
+                        min_center = centerNode
+                        
+                min_center.addClusterNode(clusterNode)         
+                clusterNode.setColor(min_center.color)       
             
     def frames(self):
         for i in range(60):
@@ -145,11 +146,13 @@ class K_mean():
     def stop(self):
         # stop animation
         self.ani.event_source.stop()
+        
+        self.clearCenterNodes()
         self.clearPlot()
         
         # make points--------------------------------------------
-        for point in self.points:
-            point.setPlot(plt.plot(point.x, point.y, 'o', ms=5 , color = '#1f77b4', alpha=1)[0]) # ms: point size
+        for clusterNode in self.clusterNodes:
+            clusterNode.setPlot(plt.plot(clusterNode.x, clusterNode.y, 'o', ms=5 , color = 'gray', alpha=0.2)[0])
             
         canvas.draw()
         
@@ -168,7 +171,7 @@ window.configure(bg='#E6E6FA')
 
 # Global var
 clusters_num = tk.IntVar()
-clusters_num.set(5)
+clusters_num.set(3)
 color = ["#FF0000", "#0000E3", "#FFD306", "#F75000", "#02DF82", "#6F00D2", "#73BF00"]
 
 # tk Frame
