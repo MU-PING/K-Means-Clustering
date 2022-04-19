@@ -12,7 +12,7 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib import animation
 
-class PointNode():
+class Node():
     
     def __init__(self, x, y):
         self.x = x
@@ -22,25 +22,38 @@ class PointNode():
     def setPlot(self, plot):
         self.plot = plot
         
-    def beSelected(self):
-        self.plot.set_color("#ff7f0e")
+class ClusterNode(Node):
+    
+    def __init__(self, x, y):
+        super().__init__(x, y)
         
-    def beProcessed(self):
-        self.plot.set_color("#d62728")
+    def setColor(self, color):
+        self.plot.set_color(color)
+        
+class CenterNode(Node):
+    
+    def __init__(self, x, y, color):
+        super().__init__(x, y)
+        self.color = color
+        self.cluster = []
+        
+    def removePlot(self):
+        self.plot.remove()
+        
+    def addClusterNode(self, clusterNode):
+        self.cluster.append(clusterNode)
+        
+    def resetCluster(self):
+        self.cluster.clear()
         
 class K_mean():
     
     def __init__(self):
-        self.data = []
-        self.center = []       
-        self.center_data = None 
-        self.plot = []          
-        self.ani =None
+        self.clusterNodes = []    # record ClusterNode
+        self.centerNodes = []   # record CenterNode             
+        self.ani = None
         
-        
-    def gen_data(self):
-        
-        # set plot
+    def clearPlot(self):
         plt.clf()
         plt.title("Data Distribution", fontsize=28)
         plt.xlabel('x asix', fontsize=20)
@@ -48,8 +61,12 @@ class K_mean():
         plt.xlim(-1200, 1200)
         plt.ylim(-1200, 1200)
         
+    def gen_data(self):
+        
+        # clear plot
+        self.clearPlot()
+        
         # generate points--------------------------------------------
-        data=[]
         for _ in range(clusters_num.get()): #群數
             center_x = np.random.randint(-1000, 1000)
             center_y = np.random.randint(-1000, 1000)
@@ -57,13 +74,13 @@ class K_mean():
                 new_x = center_x + np.random.uniform(-120, 120)
                 new_y = center_y + np.random.uniform(-120, 120)
                 
-                data.append(PointNode(new_x, new_y))
-                plt.plot(new_x, new_y, 'o', ms=5 , color = 'gray', alpha=1) #畫圖 ms：折點大小
-        self.data = np.array(data)
+                point = ClusterNode(new_x, new_y)
+                point.setPlot(plt.plot(point.x, point.y, 'o', ms=3 , color = 'gray', alpha=1)[0]) # ms: point size   
+                self.clusterNodes.append(point)   
+                
         canvas.draw()
         
     def start(self):   
-        self.center_data = [[] for _ in range(clusters_num.get())]
         self.ani = animation.FuncAnimation(fig=fig, func=self.update, frames=self.frames, init_func = self.init, interval=1200, blit=False, repeat=False) #動畫
         canvas.draw()
         
@@ -72,46 +89,44 @@ class K_mean():
         for i in range(clusters_num.get()): #群心
             center_x = np.random.randint(-1000, 1000)
             center_y = np.random.randint(-1000, 1000)
-            self.center.append((center_x, center_y))
-            self.plot.append(plt.plot(center_x, center_y, 'o', ms=7 , color = color[i], alpha=1)[0]) 
-        
+            point = CenterNode(center_x, center_y, color[i])
+            point.setPlot(plt.plot(point.x, point.y, 'o', ms=5 , color = color[i], alpha=1)[0]) 
+            self.centerNodes.append(point)
+
         canvas.draw()
         
     def update(self, i):
         if(i==0):
-            for i in self.plot:
-                i[0].remove()
-            self.plot=[]
-            
-            for i in range(clusters_num.get()): #更新群心
-                data_count = 0
-                sum_x = 0
-                sum_y = 0
-                for j in self.center_data[i]:
-                    sum_x+=j[0]
-                    sum_y+=j[1]
-                    data_count+=1
+            for centerNode in self.centerNodes:
+                cluster = centerNode.cluster
+                numData = len(cluster)
+
+                if(numData!=0):
+                    sumX = 0
+                    sumY = 0
                     
-                if(data_count==0):
-                    self.center[i] = self.center[i]
-                else:
-                    self.center[i] = [sum_x/data_count, sum_y/data_count]
-                self.plot.append(plt.plot(self.center[i][0], self.center[i][1], 'o', ms=5 , color = color[i], alpha=1))
+                    for clusterNode in cluster:
+                        sumX += clusterNode.x
+                        sumY += clusterNode.y   
+                        
+                    centerNode.removePlot()
+                    centerNode.x = sumX/numData
+                    centerNode.y = sumY/numData
+                    centerNode.setPlot(plt.plot(centerNode.x, centerNode.y, 'o', ms=5 , color = centerNode.color, alpha=1)[0]) 
                 
         elif(i==1):
-            plt.clf()
-            plt.title("Data")
-            
-            self.plot=[]
-            self.center_data = [[] for _ in range(clusters_num.get())]
-            for i in range(clusters_num.get()):
-                self.plot.append(plt.plot(self.center[i][0], self.center[i][1], 'o', ms=5 , color = color[i], alpha=1))
-            
-            for i in self.data:                 #更新資料
+            self.clearPlot()
+
+            for centerNode in self.centerNodes:
+                centerNode.setPlot(plt.plot(centerNode.x, centerNode.y, 'o', ms=5 , color = centerNode.color, alpha=1)[0])
+                centerNode.resetCluster()
+                
+            for clusterNode in self.clusterNodes:
                 min_x = 0
                 min_y = 0
                 min_distance = float("inf")
                 min_index = 0
+                
                 for center_index in range(clusters_num.get()):
                     distance = ((self.center[center_index][0]-i[0])**2 + (self.center[center_index][1]-i[1])**2)**0.5 # 採取歐基里德距離，其他評估標準亦可
                     if(distance < min_distance):
@@ -119,9 +134,9 @@ class K_mean():
                         min_y = i[1]
                         min_distance = distance
                         min_index = center_index
-                        
-                self.center_data[min_index].append([min_x, min_y]) 
-                plt.plot(i[0], i[1], 'o', ms=5 , color = color[min_index], alpha=.2) 
+                    
+            self.center_data[min_index].append([min_x, min_y]) 
+            plt.plot(i[0], i[1], 'o', ms=5 , color = color[min_index], alpha=.2) 
             
     def frames(self):
         for i in range(60):
@@ -130,16 +145,7 @@ class K_mean():
     def stop(self):
         # stop animation
         self.ani.event_source.stop()
-        
-        self.clearStructure()
-        
-        # set plot
-        plt.clf()
-        plt.title("Data Distribution", fontsize=28)
-        plt.xlabel('x asix', fontsize=20)
-        plt.ylabel('y asix', fontsize=20)
-        plt.xlim(-1200, 1200)
-        plt.ylim(-1200, 1200)
+        self.clearPlot()
         
         # make points--------------------------------------------
         for point in self.points:
@@ -183,7 +189,7 @@ brain = K_mean()
 brain.gen_data()
 
 # GUI
-tk.Label(setting1, font=("Calibri", 15, "bold"), text="Clusters:", bg="#F0FFF0").pack(side='left', padx=5)
+tk.Label(setting1, font=("Calibri", 15, "bold"), text="Number of clusters:", bg="#F0FFF0").pack(side='left', padx=5)
 ent = tk.Entry(setting1, width=5, textvariable=clusters_num)
 ent.pack(side='left')
 btn1 = tk.Button(setting1, font=("Calibri", 12, "bold"), text='Generate points', command=lambda:[brain.gen_data()])
