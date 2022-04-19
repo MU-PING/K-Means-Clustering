@@ -10,7 +10,7 @@
 * 「開始訓練」產生最終聚類結果
 
 ### 範例圖
-![](https://i.imgur.com/qXIXrpY.png)
+![20220419_103632_](https://user-images.githubusercontent.com/93152909/163909360-3bee3e78-39f9-45c7-b805-ed2480679b74.gif)
 
 ## K-Means演算法
 ### 演算法簡介
