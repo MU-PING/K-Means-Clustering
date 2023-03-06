@@ -4,13 +4,13 @@ Created on Tue Nov 24 22:02:29 2020
 @author: Mu-Ping
 """
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
+import matplotlib.pyplot as plt
 
 from tkinter import ttk 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib import animation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class Node():
     
@@ -88,7 +88,7 @@ class K_mean():
         canvas.draw()
         
     def start(self):   
-        self.ani = animation.FuncAnimation(fig=fig, func=self.update, frames=self.frames, init_func = self.init, interval=1200, blit=False, repeat=False) #動畫
+        self.ani = animation.FuncAnimation(fig=fig, func=self.update, frames=self.frames, init_func = self.init, interval=1200, blit=False, repeat=False, save_count=20) #動畫
         canvas.draw()
         
     def init(self): 
@@ -183,7 +183,7 @@ setting2 = tk.Frame(window)
 setting2.pack(side='top', pady=10)
 
 # Plot
-fig = plt.figure(figsize=(9, 8))
+fig = plt.figure(figsize=(9, 8), dpi=72)
 canvas = FigureCanvasTkAgg(fig, setting2)  # A tk.DrawingArea.
 canvas.get_tk_widget().grid()
 
